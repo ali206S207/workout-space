@@ -97,16 +97,26 @@ const state = {
   records: JSON.parse(localStorage.getItem("awsRecords") || "[]")
 };
 
+const SUPABASE_URL = "https://ublurrzfsxikexfhqbns.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable__eHTaR5LSjzgwhCsjp2h2Q_qH23zoNe";
+const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) : null;
+
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 let deferredInstallPrompt = null;
+let activeKeypadInput = null;
+let currentUser = null;
+let cloudSaveTimer = null;
+let cloudReady = false;
 
 function saveRecords() {
   localStorage.setItem("awsRecords", JSON.stringify(state.records));
+  scheduleCloudSave();
 }
 
 function savePlan() {
   localStorage.setItem("awsPlan", JSON.stringify(state.plan));
+  scheduleCloudSave();
 }
 
 function formatClock(seconds) {
@@ -160,6 +170,220 @@ function setupPwa() {
   window.addEventListener("appinstalled", () => {
     $("#installApp")?.classList.add("hidden");
     showToast("اتثبت التطبيق بنجاح.");
+  });
+}
+
+function inputLabelForKeypad(input) {
+  const label = input.closest("label");
+  return label ? label.childNodes[0].textContent.trim() : "إدخال رقم";
+}
+
+function openKeypad(input) {
+  activeKeypadInput = input;
+  $("#keypadLabel").textContent = inputLabelForKeypad(input);
+  $("#keypadValue").textContent = input.value || "0";
+  $("#numberKeypad").classList.remove("hidden");
+}
+
+function closeKeypad() {
+  activeKeypadInput = null;
+  $("#numberKeypad").classList.add("hidden");
+}
+
+function setKeypadValue(value) {
+  if (!activeKeypadInput) return;
+  activeKeypadInput.value = value;
+  $("#keypadValue").textContent = value || "0";
+  activeKeypadInput.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function handleKeypadKey(key) {
+  if (!activeKeypadInput) return;
+  const mode = activeKeypadInput.dataset.keypad || "decimal";
+  const current = activeKeypadInput.value || "";
+
+  if (key === "done") {
+    closeKeypad();
+    return;
+  }
+  if (key === "clear") {
+    setKeypadValue("");
+    return;
+  }
+  if (key === "back") {
+    setKeypadValue(current.slice(0, -1));
+    return;
+  }
+  if (key === "." && (mode !== "decimal" || current.includes("."))) return;
+  setKeypadValue(`${current}${key}`);
+}
+
+function setupCustomKeypad() {
+  document.addEventListener("click", (event) => {
+    const keypadInput = event.target.closest("[data-keypad]");
+    const keypadKey = event.target.closest("#numberKeypad [data-key]");
+    const insideKeypad = event.target.closest("#numberKeypad");
+
+    if (keypadKey) {
+      handleKeypadKey(keypadKey.dataset.key);
+      return;
+    }
+    if (keypadInput) {
+      openKeypad(keypadInput);
+      return;
+    }
+    if (!insideKeypad && activeKeypadInput) closeKeypad();
+  });
+}
+
+function renderAll() {
+  renderPlanPreview();
+  renderDayTabs();
+  renderExerciseLibrary();
+  state.activeSession = null;
+  renderExercises();
+  renderStats();
+  renderHistory();
+  updateRestClock();
+}
+
+function localPayload() {
+  return {
+    user_id: currentUser?.id,
+    plan: state.plan,
+    records: state.records
+  };
+}
+
+function setCloudStatus(message) {
+  $("#cloudStatus").textContent = message;
+  $("#authState").textContent = currentUser ? "Cloud active" : "Offline local";
+  $("#authEmail").textContent = currentUser?.email || "سجل دخولك عشان بياناتك تشتغل من أي جهاز";
+}
+
+function renderAuthState() {
+  const signedIn = Boolean(currentUser);
+  $("#signOutButton").classList.toggle("hidden", !signedIn);
+  $("#authForm").classList.toggle("signed-in", signedIn);
+  $("#authEmailInput").disabled = signedIn;
+  $("#authPasswordInput").disabled = signedIn;
+  setCloudStatus(signedIn ? `متصل بحساب ${currentUser.email}` : "بياناتك محفوظة محليًا على الجهاز ده.");
+}
+
+function scheduleCloudSave() {
+  if (!currentUser || !cloudReady) return;
+  clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(syncCloudData, 650);
+}
+
+async function syncCloudData() {
+  if (!supabaseClient || !currentUser) return;
+  const { error } = await supabaseClient
+    .from("app_state")
+    .upsert(localPayload(), { onConflict: "user_id" });
+  if (error) {
+    showToast("المزامنة فشلت. اتأكد إن جدول Supabase معمول.");
+    return;
+  }
+  setCloudStatus(`آخر مزامنة تمت الآن: ${currentUser.email}`);
+}
+
+async function loadCloudData() {
+  if (!supabaseClient || !currentUser) return;
+  const { data, error } = await supabaseClient
+    .from("app_state")
+    .select("plan, records")
+    .eq("user_id", currentUser.id)
+    .maybeSingle();
+
+  if (error) {
+    cloudReady = false;
+    showToast("اعمل Run لملف supabase-schema.sql الأول.");
+    setCloudStatus("محتاج تجهيز جدول Supabase قبل المزامنة.");
+    return;
+  }
+
+  cloudReady = true;
+  if (data?.plan?.length || data?.records?.length) {
+    state.plan = data.plan?.length ? data.plan : structuredClone(defaultPlan);
+    state.records = data.records || [];
+    localStorage.setItem("awsPlan", JSON.stringify(state.plan));
+    localStorage.setItem("awsRecords", JSON.stringify(state.records));
+    renderAll();
+    showToast("تم تحميل بياناتك من السحابة.");
+  } else {
+    await syncCloudData();
+    showToast("تم رفع بيانات الجهاز للحساب.");
+  }
+}
+
+async function signIn(event) {
+  event.preventDefault();
+  if (!supabaseClient) {
+    showToast("مكتبة Supabase لم تحمل. اتأكد من الاتصال بالنت.");
+    return;
+  }
+  const email = $("#authEmailInput").value.trim();
+  const password = $("#authPasswordInput").value;
+  if (!email || !password) {
+    showToast("اكتب الإيميل والباسورد.");
+    return;
+  }
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (error) {
+    showToast(error.message);
+    return;
+  }
+  currentUser = data.user;
+  renderAuthState();
+  await loadCloudData();
+}
+
+async function signUp() {
+  if (!supabaseClient) {
+    showToast("مكتبة Supabase لم تحمل. اتأكد من الاتصال بالنت.");
+    return;
+  }
+  const email = $("#authEmailInput").value.trim();
+  const password = $("#authPasswordInput").value;
+  if (!email || password.length < 6) {
+    showToast("اكتب إيميل وباسورد 6 حروف على الأقل.");
+    return;
+  }
+  const { data, error } = await supabaseClient.auth.signUp({ email, password });
+  if (error) {
+    showToast(error.message);
+    return;
+  }
+  currentUser = data.user;
+  renderAuthState();
+  if (currentUser) await loadCloudData();
+  showToast("الحساب اتعمل. لو Supabase طالب تأكيد، افتح الإيميل.");
+}
+
+async function signOut() {
+  if (supabaseClient) await supabaseClient.auth.signOut();
+  currentUser = null;
+  cloudReady = false;
+  $("#authPasswordInput").value = "";
+  renderAuthState();
+  showToast("تم تسجيل الخروج.");
+}
+
+async function setupSupabaseAuth() {
+  if (!supabaseClient) {
+    setCloudStatus("مزامنة السحابة تحتاج اتصال بالإنترنت.");
+    return;
+  }
+  const { data } = await supabaseClient.auth.getSession();
+  currentUser = data.session?.user || null;
+  renderAuthState();
+  if (currentUser) await loadCloudData();
+
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    currentUser = session?.user || null;
+    renderAuthState();
+    if (currentUser) loadCloudData();
   });
 }
 
@@ -227,14 +451,24 @@ function renderExercises() {
           <h3>${exercise.name}</h3>
           <small>${exercise.target}</small>
         </div>
-        <div class="exercise-swap">
-          <label>بدل التمرين
-            <select data-replace-select="${exIndex}">
-              <option value="">اختار تمرين</option>
-              ${libraryOptions(exercise.name)}
-            </select>
-          </label>
-          <button class="ghost" data-replace-exercise="${exIndex}" type="button">تبديل</button>
+        <div class="exercise-controls">
+          <div class="order-controls" aria-label="ترتيب التمرين">
+            <button class="ghost icon-button" data-move-exercise="${exIndex}:up" type="button" aria-label="رفع التمرين لفوق" ${exIndex === 0 ? "disabled" : ""}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg>
+            </button>
+            <button class="ghost icon-button" data-move-exercise="${exIndex}:down" type="button" aria-label="تنزيل التمرين لتحت" ${exIndex === state.activeSession.exercises.length - 1 ? "disabled" : ""}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+          </div>
+          <div class="exercise-swap">
+            <label>بدل التمرين
+              <select data-replace-select="${exIndex}">
+                <option value="">اختار تمرين</option>
+                ${libraryOptions(exercise.name)}
+              </select>
+            </label>
+            <button class="ghost" data-replace-exercise="${exIndex}" type="button">تبديل</button>
+          </div>
         </div>
       </div>
       <div class="set-table">
@@ -242,10 +476,10 @@ function renderExercises() {
           <div class="set-row">
             <div class="set-number">${setIndex + 1}</div>
             <label>الوزن kg
-              <input type="number" min="0" step="0.5" value="${set.weight}" data-ex="${exIndex}" data-set="${setIndex}" data-field="weight">
+              <input type="text" value="${set.weight}" data-ex="${exIndex}" data-set="${setIndex}" data-field="weight" data-keypad="decimal" inputmode="none" readonly>
             </label>
             <label>العدات
-              <input type="number" min="0" step="1" value="${set.reps}" data-ex="${exIndex}" data-set="${setIndex}" data-field="reps">
+              <input type="text" value="${set.reps}" data-ex="${exIndex}" data-set="${setIndex}" data-field="reps" data-keypad="number" inputmode="none" readonly>
             </label>
             <button class="check-set ${set.done ? "done" : ""}" data-check="${exIndex}:${setIndex}" aria-label="إنهاء المجموعة">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
@@ -346,6 +580,24 @@ function replaceExercise(exIndex) {
   renderPlanPreview();
   renderExercises();
   showToast(`تم تبديل ${currentName} بـ ${replacement.name}.`);
+}
+
+function moveExercise(exIndex, direction) {
+  const day = getActiveDay();
+  const nextIndex = direction === "up" ? exIndex - 1 : exIndex + 1;
+  if (!day || nextIndex < 0 || nextIndex >= state.activeSession.exercises.length) return;
+
+  const moveItem = (items) => {
+    const [item] = items.splice(exIndex, 1);
+    items.splice(nextIndex, 0, item);
+  };
+
+  moveItem(day.exercises);
+  moveItem(state.activeSession.exercises);
+  savePlan();
+  renderPlanPreview();
+  renderExercises();
+  showToast(direction === "up" ? "التمرين طلع لفوق." : "التمرين نزل لتحت.");
 }
 
 function changeDay(dayId) {
@@ -524,6 +776,12 @@ document.addEventListener("click", (event) => {
   const replaceBtn = event.target.closest("[data-replace-exercise]");
   if (replaceBtn) replaceExercise(Number(replaceBtn.dataset.replaceExercise));
 
+  const moveBtn = event.target.closest("[data-move-exercise]");
+  if (moveBtn) {
+    const [exIndex, direction] = moveBtn.dataset.moveExercise.split(":");
+    moveExercise(Number(exIndex), direction);
+  }
+
   const addSet = event.target.closest("[data-add-set]");
   if (addSet) {
     ensureActiveSession();
@@ -566,6 +824,9 @@ $("#exportJson").addEventListener("click", exportJson);
 $("#librarySearch").addEventListener("input", renderExerciseLibrary);
 $("#libraryMuscle").addEventListener("change", renderExerciseLibrary);
 $("#customExerciseForm").addEventListener("submit", addCustomExercise);
+$("#authForm").addEventListener("submit", signIn);
+$("#signUpButton").addEventListener("click", signUp);
+$("#signOutButton").addEventListener("click", signOut);
 
 renderPlanPreview();
 renderDayTabs();
@@ -575,3 +836,5 @@ renderStats();
 renderHistory();
 updateRestClock();
 setupPwa();
+setupCustomKeypad();
+setupSupabaseAuth();

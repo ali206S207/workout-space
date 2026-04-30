@@ -64,6 +64,11 @@
         <strong id="sideRest">02:00</strong>
         <small>تقدر تعدله من شاشة التمرين</small>
       </div>
+      <div class="auth-card">
+        <span>Cloud Sync</span>
+        <strong id="authState">Offline local</strong>
+        <small id="authEmail">سجل دخولك عشان بياناتك تشتغل من أي جهاز</small>
+      </div>
     </aside>
 
     <main>
@@ -98,6 +103,26 @@
       </section>
 
       <section class="view active" id="dashboard">
+        <section class="auth-panel panel">
+          <div>
+            <p class="eyebrow">Account</p>
+            <h2>حسابك والمزامنة</h2>
+            <p id="cloudStatus">بياناتك محفوظة محليًا على الجهاز ده.</p>
+          </div>
+          <form class="auth-form" id="authForm">
+            <label>Email
+              <input type="email" id="authEmailInput" autocomplete="email" placeholder="you@example.com">
+            </label>
+            <label>Password
+              <input type="password" id="authPasswordInput" autocomplete="current-password" placeholder="••••••••">
+            </label>
+            <div class="auth-actions">
+              <button class="primary" type="submit">Login</button>
+              <button class="ghost" type="button" id="signUpButton">Create account</button>
+              <button class="ghost hidden" type="button" id="signOutButton">Logout</button>
+            </div>
+          </form>
+        </section>
         <div class="stats-grid">
           <article class="stat-card"><span>جلسات مسجلة</span><strong id="statSessions">0</strong></article>
           <article class="stat-card"><span>مجموعات مكتملة</span><strong id="statSets">0</strong></article>
@@ -157,7 +182,7 @@
             <small>بيشتغل تلقائيًا بعد علامة صح لأي مجموعة</small>
           </div>
           <label>الدقائق
-            <input type="number" id="restMinutes" min="0.25" step="0.25" value="2">
+            <input type="text" id="restMinutes" value="2" inputmode="none" readonly data-keypad="decimal">
           </label>
           <button class="ghost" id="pauseRest">إيقاف</button>
           <button class="ghost" id="skipRest">Skip</button>
@@ -237,6 +262,33 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="pwa-status" id="pwaStatus" role="status" aria-live="polite">جاهز للعمل أوفلاين</div>
+  <div class="keypad hidden" id="numberKeypad" aria-label="لوحة أرقام الموقع">
+    <div class="keypad-display">
+      <span id="keypadLabel">إدخال رقم</span>
+      <strong id="keypadValue">0</strong>
+    </div>
+    <div class="keypad-grid">
+      <button type="button" data-key="7">7</button>
+      <button type="button" data-key="8">8</button>
+      <button type="button" data-key="9">9</button>
+      <button type="button" data-key="4">4</button>
+      <button type="button" data-key="5">5</button>
+      <button type="button" data-key="6">6</button>
+      <button type="button" data-key="1">1</button>
+      <button type="button" data-key="2">2</button>
+      <button type="button" data-key="3">3</button>
+      <button type="button" data-key=".">.</button>
+      <button type="button" data-key="0">0</button>
+      <button type="button" data-key="back" aria-label="مسح رقم">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6H9l-5 6 5 6h11z"/><path d="m12 10 4 4m0-4-4 4"/></svg>
+      </button>
+    </div>
+    <div class="keypad-actions">
+      <button class="ghost" type="button" data-key="clear">مسح</button>
+      <button class="primary" type="button" data-key="done">تم</button>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-const CACHE_NAME = "ali-workout-space-v1";
+const CACHE_NAME = "ali-workout-space-v4";
 const APP_SHELL = [
   "./",
   "./index.html",
