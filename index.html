@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090909">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ali Workout">
+  <title>Ali Workout Space</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="intro" id="intro" aria-hidden="true">
+    <div class="intro-bolt"></div>
+    <img src="assets/ali-emblem.png" alt="" class="intro-logo">
+    <div class="intro-copy">
+      <span>WELCOME BACK</span>
+      <strong>ALI</strong>
+      <small>Built in silence. Logged with precision.</small>
+    </div>
+  </div>
+
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="التنقل الرئيسي">
+      <div class="brand">
+        <img src="assets/ali-emblem.png" alt="Ali Workout Space logo">
+        <div>
+          <span>Ali</span>
+          <strong>Workout Space</strong>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-link active" data-view="dashboard" aria-label="الرئيسية">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10.5V20h14v-9.5"/><path d="M9 20v-6h6v6"/></svg>
+          <span>الرئيسية</span>
+        </button>
+        <button class="nav-link" data-view="workout" aria-label="التمرين">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></svg>
+          <span>التمرين</span>
+        </button>
+        <button class="nav-link" data-view="library" aria-label="مكتبة التمارين">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/><path d="M6 5v14"/></svg>
+          <span>المكتبة</span>
+        </button>
+        <button class="nav-link" data-view="rest" aria-label="يوم الراحة">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14a8 8 0 0 0 16 0"/><path d="M6 10h12"/><path d="M8 6h8"/></svg>
+          <span>راحة</span>
+        </button>
+        <button class="nav-link" data-view="history" aria-label="السجل">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+          <span>السجل</span>
+        </button>
+      </nav>
+      <div class="side-card">
+        <span>Rest Timer</span>
+        <strong id="sideRest">02:00</strong>
+        <small>تقدر تعدله من شاشة التمرين</small>
+      </div>
+    </aside>
+
+    <main>
+      <section class="hero panel">
+        <div class="hero-media">
+          <img src="assets/ali-poster.png" alt="Ali training poster">
+          <div class="scan-line"></div>
+        </div>
+        <div class="hero-content">
+          <p class="eyebrow">Ali Workout Space</p>
+          <h1>أهلا يا علي. النهاردة هنكسب جلسة جديدة.</h1>
+          <p>نظام PPL كامل، تسجيل مجموعات، مؤقت راحة قابل للتعديل، وسجل مرتب لكل تمرينة ويوم راحة.</p>
+          <div class="hero-actions">
+            <button class="primary" data-view-target="workout">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7z"/></svg>
+              ابدأ التمرينة
+            </button>
+            <button class="ghost" data-view-target="history">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+              افتح السجل
+            </button>
+            <button class="ghost" data-view-target="library">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/><path d="M6 5v14"/></svg>
+              مكتبة التمارين
+            </button>
+            <button class="ghost install-button hidden" id="installApp">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+              تثبيت التطبيق
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="view active" id="dashboard">
+        <div class="stats-grid">
+          <article class="stat-card"><span>جلسات مسجلة</span><strong id="statSessions">0</strong></article>
+          <article class="stat-card"><span>مجموعات مكتملة</span><strong id="statSets">0</strong></article>
+          <article class="stat-card"><span>إجمالي الحجم</span><strong id="statVolume">0 kg</strong></article>
+          <article class="stat-card"><span>أيام راحة</span><strong id="statRest">0</strong></article>
+        </div>
+        <div class="two-col">
+          <section class="panel">
+            <div class="section-head">
+              <span>الخطة الحالية</span>
+              <strong>Push / Pull / Legs</strong>
+            </div>
+            <div class="plan-preview" id="planPreview"></div>
+          </section>
+          <section class="panel focus-panel">
+            <img src="assets/ali-focus.png" alt="Ali focus poster">
+            <div>
+              <span>Today's rule</span>
+              <strong>سجل كل مجموعة. الباقي هيتبني لوحده.</strong>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="workout">
+        <div class="workout-top panel">
+          <div>
+            <p class="eyebrow">Training Console</p>
+            <h2>اختار يومك وابدأ الجلسة</h2>
+          </div>
+          <div class="session-timer">
+            <span>وقت التمرينة</span>
+            <strong id="sessionClock">00:00:00</strong>
+          </div>
+          <button class="primary" id="startWorkout">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7z"/></svg>
+            ابدأ التمرينة
+          </button>
+          <button class="danger hidden" id="finishWorkout">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M7 7h10v10H7z"/></svg>
+            إنهاء وحفظ
+          </button>
+        </div>
+
+        <div class="day-tabs" id="dayTabs"></div>
+        <div class="zone-note panel">
+          <div>
+            <span>Workout Zone</span>
+            <strong>جدولك هنا بس</strong>
+          </div>
+          <small>غير أي تمرين من قائمة التبديل داخل كارت التمرين، واضغط ابدأ التمرينة عشان تايمر الجلسة يشتغل.</small>
+        </div>
+        <div class="rest-console panel" id="restConsole">
+          <div>
+            <span>Rest Timer</span>
+            <strong id="restClock">02:00</strong>
+            <small>بيشتغل تلقائيًا بعد علامة صح لأي مجموعة</small>
+          </div>
+          <label>الدقائق
+            <input type="number" id="restMinutes" min="0.25" step="0.25" value="2">
+          </label>
+          <button class="ghost" id="pauseRest">إيقاف</button>
+          <button class="ghost" id="skipRest">Skip</button>
+        </div>
+        <div class="exercise-list" id="exerciseList"></div>
+      </section>
+
+      <section class="view" id="library">
+        <div class="library-console panel">
+          <div class="section-head library-head">
+            <div>
+              <span>Exercise Library</span>
+              <strong>مكتبة التمارين</strong>
+            </div>
+            <small>اختار التمرين وضيفه لليوم المختار، أو زود تمرينك الخاص.</small>
+          </div>
+          <div class="library-tools">
+            <label>بحث
+              <input type="search" id="librarySearch" placeholder="اكتب اسم التمرين">
+            </label>
+            <label>العضلة
+              <select id="libraryMuscle">
+                <option value="all">كل العضلات</option>
+                <option value="chest">صدر</option>
+                <option value="back">ظهر</option>
+                <option value="shoulders">كتف</option>
+                <option value="arms">ذراع</option>
+                <option value="legs">رجل</option>
+                <option value="core">كور</option>
+              </select>
+            </label>
+          </div>
+          <div class="library-list" id="libraryList"></div>
+          <form class="custom-exercise" id="customExerciseForm">
+            <label>تمرين خاص
+              <input type="text" id="customExerciseName" placeholder="مثال: Machine Chest Press">
+            </label>
+            <label>الهدف
+              <input type="text" id="customExerciseTarget" placeholder="3 مجموعات - 8 إلى 12 عدة">
+            </label>
+            <button class="primary" type="submit">إضافة للجدول</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="view" id="rest">
+        <div class="panel rest-day">
+          <div>
+            <p class="eyebrow">Recovery Log</p>
+            <h2>سجل يوم الراحة بعد 3 أيام تمرين</h2>
+            <p>لما تخلص Push و Pull و Legs، سجل الراحة هنا عشان الدورة تبقى كاملة والسجل يحسبها.</p>
+          </div>
+          <form id="restForm">
+            <label>ملاحظات الراحة
+              <textarea id="restNotes" rows="4" placeholder="نوم، أكل، مشي خفيف، إحساس العضلات..."></textarea>
+            </label>
+            <button class="primary" type="submit">تسجيل يوم الراحة</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="view" id="history">
+        <div class="history-head panel">
+          <div>
+            <p class="eyebrow">Training Archive</p>
+            <h2>السجل</h2>
+          </div>
+          <div class="history-actions">
+            <button class="ghost" id="exportJson">تصدير البيانات</button>
+            <button class="primary" id="openReport">PDF آخر 3 أيام</button>
+          </div>
+        </div>
+        <div class="history-list" id="historyList"></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="pwa-status" id="pwaStatus" role="status" aria-live="polite">جاهز للعمل أوفلاين</div>
+  <script src="app.js"></script>
+</body>
+</html>
